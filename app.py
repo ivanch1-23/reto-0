@@ -101,14 +101,21 @@ def dashboard():
     cursor = conn.cursor()
     
     if request.method == 'POST':
-        original_url = request.form['original_url']
-        short_code = generar_codigo()
-        cursor.execute(
-            "INSERT INTO urls (user_id, original_url, short_code, clicks) VALUES (?, ?, ?, 0)",
-            (session['user_id'], original_url, short_code)
-        )
-        conn.commit()
-        flash(f"Enlace acortado generado: {short_code}")
+        original_url = request.form.get('original_url', '').strip()
+        if not original_url:
+            flash("La URL no puede estar vacía.")
+        elif len(original_url) > 500:
+            flash("La URL no puede exceder los 500 caracteres.")
+        elif original_url.lower().startswith(('javascript:', 'data:', 'vbscript:')):
+            flash("Esquema de URL no permitido por motivos de seguridad.")
+        else:
+            short_code = generar_codigo()
+            cursor.execute(
+                "INSERT INTO urls (user_id, original_url, short_code, clicks) VALUES (?, ?, ?, 0)",
+                (session['user_id'], original_url, short_code)
+            )
+            conn.commit()
+            flash(f"Enlace acortado generado: {short_code}")
         
     cursor.execute("SELECT * FROM urls WHERE user_id = ?", (session['user_id'],))
     enlaces = cursor.fetchall()

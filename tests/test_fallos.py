@@ -77,3 +77,33 @@ def test_usuario_no_puede_eliminar_enlace_de_otro():
     # El enlace NO debe haber sido eliminado y la respuesta debe ser 403 Forbidden
     assert respuesta.status_code == 403
     assert fila_despues is not None
+
+
+def test_rechaza_url_invalida_o_vacia():
+    init_db()
+    c = app.test_client()
+    num = random.randint(10000, 99999)
+    usuario = f"user_val_{num}"
+
+    c.post('/register', data={'username': usuario, 'password': 'Password123!'}, follow_redirects=True)
+    c.post('/login', data={'username': usuario, 'password': 'Password123!'}, follow_redirects=True)
+
+    # Contar enlaces antes
+    filas_antes = consultar_db("SELECT COUNT(*) as total FROM urls WHERE user_id = (SELECT id FROM users WHERE username = ?)", (usuario,), one=True)
+    total_antes = filas_antes['total']
+
+    # 1. Enviar URL vacía
+    c.post('/dashboard', data={'original_url': '   '}, follow_redirects=True)
+
+    # 2. Enviar URL con más de 500 caracteres
+    url_larga = "https://ejemplo.com/" + ("a" * 550)
+    c.post('/dashboard', data={'original_url': url_larga}, follow_redirects=True)
+
+    # 3. Enviar URL maliciosa (javascript:)
+    c.post('/dashboard', data={'original_url': 'javascript:alert(document.cookie)'}, follow_redirects=True)
+
+    # Contar enlaces después: no debe haberse creado ningún registro nuevo
+    filas_despues = consultar_db("SELECT COUNT(*) as total FROM urls WHERE user_id = (SELECT id FROM users WHERE username = ?)", (usuario,), one=True)
+    total_despues = filas_despues['total']
+
+    assert total_despues == total_antes
