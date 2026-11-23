@@ -28,3 +28,4 @@ Cuenta con sistema de autenticación de usuarios y panel de administración de e
 - No hacer commit ni push: los ejecuta el desarrollador desde la terminal.
 
 ## Lecciones aprendidas
+- Las contraseñas se guardan siempre con función de hash (werkzeug.security), nunca en texto plano.
