@@ -5,6 +5,7 @@ import string
 
 from dotenv import load_dotenv
 from flask import Flask, flash, redirect, render_template, request, session, url_for
+from werkzeug.security import check_password_hash, generate_password_hash
 
 load_dotenv()
 
@@ -14,7 +15,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "fallback-secret-key-para-desarrol
 DATABASE = 'acortador.db'
 
 def get_db():
-    conn = sqlite3.connect(DATABASE)
+    conn = sqlite3.connect(DATABASE, timeout=15)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -58,7 +59,8 @@ def register():
         
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, password))
+        password_hash = generate_password_hash(password)
+        cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, password_hash))
         conn.commit()
         conn.close()
         flash("Usuario registrado exitosamente. Inicie sesión.")
@@ -73,11 +75,11 @@ def login():
         
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
+        cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
         user = cursor.fetchone()
         conn.close()
         
-        if user:
+        if user and check_password_hash(user['password'], password):
             session['user_id'] = user['id']
             session['username'] = user['username']
             return redirect(url_for('dashboard'))
@@ -99,14 +101,21 @@ def dashboard():
     cursor = conn.cursor()
     
     if request.method == 'POST':
-        original_url = request.form['original_url']
-        short_code = generar_codigo()
-        cursor.execute(
-            "INSERT INTO urls (user_id, original_url, short_code, clicks) VALUES (?, ?, ?, 0)",
-            (session['user_id'], original_url, short_code)
-        )
-        conn.commit()
-        flash(f"Enlace acortado generado: {short_code}")
+        original_url = request.form.get('original_url', '').strip()
+        if not original_url:
+            flash("La URL no puede estar vacía.")
+        elif len(original_url) > 500:
+            flash("La URL no puede exceder los 500 caracteres.")
+        elif original_url.lower().startswith(('javascript:', 'data:', 'vbscript:')):
+            flash("Esquema de URL no permitido por motivos de seguridad.")
+        else:
+            short_code = generar_codigo()
+            cursor.execute(
+                "INSERT INTO urls (user_id, original_url, short_code, clicks) VALUES (?, ?, ?, 0)",
+                (session['user_id'], original_url, short_code)
+            )
+            conn.commit()
+            flash(f"Enlace acortado generado: {short_code}")
         
     cursor.execute("SELECT * FROM urls WHERE user_id = ?", (session['user_id'],))
     enlaces = cursor.fetchall()
@@ -141,7 +150,19 @@ def eliminar(url_id):
         
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM urls WHERE id = ?", (url_id,))
+    cursor.execute("SELECT user_id FROM urls WHERE id = ?", (url_id,))
+    enlace = cursor.fetchone()
+    
+    if not enlace:
+        conn.close()
+        flash("El enlace no existe")
+        return redirect(url_for('dashboard')), 404
+        
+    if enlace['user_id'] != session['user_id']:
+        conn.close()
+        return "Acceso no autorizado: no puedes eliminar enlaces de otro usuario", 403
+        
+    cursor.execute("DELETE FROM urls WHERE id = ? AND user_id = ?", (url_id, session['user_id']))
     conn.commit()
     conn.close()
     flash("Enlace eliminado")
