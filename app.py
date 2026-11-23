@@ -15,7 +15,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "fallback-secret-key-para-desarrol
 DATABASE = 'acortador.db'
 
 def get_db():
-    conn = sqlite3.connect(DATABASE)
+    conn = sqlite3.connect(DATABASE, timeout=15)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -143,7 +143,19 @@ def eliminar(url_id):
         
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM urls WHERE id = ?", (url_id,))
+    cursor.execute("SELECT user_id FROM urls WHERE id = ?", (url_id,))
+    enlace = cursor.fetchone()
+    
+    if not enlace:
+        conn.close()
+        flash("El enlace no existe")
+        return redirect(url_for('dashboard')), 404
+        
+    if enlace['user_id'] != session['user_id']:
+        conn.close()
+        return "Acceso no autorizado: no puedes eliminar enlaces de otro usuario", 403
+        
+    cursor.execute("DELETE FROM urls WHERE id = ? AND user_id = ?", (url_id, session['user_id']))
     conn.commit()
     conn.close()
     flash("Enlace eliminado")

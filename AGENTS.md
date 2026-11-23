@@ -29,3 +29,4 @@ Cuenta con sistema de autenticación de usuarios y panel de administración de e
 
 ## Lecciones aprendidas
 - Las contraseñas se guardan siempre con función de hash (werkzeug.security), nunca en texto plano.
+- Antes de modificar o eliminar un registro, verificar siempre que pertenece al usuario en sesión.
