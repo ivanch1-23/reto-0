@@ -1,0 +1,432 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - LinkWave{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Stats grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin-bottom: 28px;
+    }
+
+    .stat-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(99, 102, 241, 0.4);
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+    }
+
+    .icon-indigo { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+    .icon-cyan { background: rgba(6, 182, 212, 0.15); color: #22d3ee; }
+    .icon-emerald { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+
+    .stat-info h4 {
+        font-size: 13px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .stat-info p {
+        font-size: 24px;
+        font-weight: 800;
+        color: #fff;
+    }
+
+    /* Shortener Box */
+    .shortener-card {
+        background: linear-gradient(135deg, rgba(21, 28, 44, 0.95), rgba(15, 23, 42, 0.9));
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 28px;
+        margin-bottom: 36px;
+        box-shadow: 0 15px 30px -10px rgba(0,0,0,0.5);
+    }
+
+    .shortener-card h2 {
+        font-size: 20px;
+        font-weight: 800;
+        margin-bottom: 8px;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .shortener-card p {
+        color: var(--text-muted);
+        font-size: 14px;
+        margin-bottom: 20px;
+    }
+
+    .shortener-form {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .shortener-input-wrap {
+        flex: 1;
+        min-width: 260px;
+        position: relative;
+    }
+
+    .shortener-input {
+        width: 100%;
+        padding: 15px 18px 15px 44px;
+        background: var(--bg-input);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        color: #fff;
+        font-size: 15px;
+        outline: none;
+        transition: all 0.2s ease;
+    }
+
+    .shortener-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .url-icon {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 16px;
+        color: #64748b;
+    }
+
+    .btn-shorten {
+        padding: 15px 28px;
+        background: linear-gradient(135deg, var(--primary), #4f46e5);
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 15px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 15px var(--primary-glow);
+        transition: all 0.2s ease;
+    }
+
+    .btn-shorten:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
+        filter: brightness(1.1);
+    }
+
+    /* Links Section */
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 18px;
+    }
+
+    .section-header h3 {
+        font-size: 18px;
+        font-weight: 700;
+        color: #fff;
+    }
+
+    .links-table-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .links-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+
+    .links-table th {
+        background: rgba(14, 20, 34, 0.8);
+        padding: 14px 18px;
+        font-size: 12px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        letter-spacing: 0.6px;
+        font-weight: 700;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .links-table td {
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--border);
+        font-size: 14px;
+        vertical-align: middle;
+    }
+
+    .links-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .links-table tr:hover {
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .url-orig {
+        max-width: 280px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: block;
+        color: #cbd5e1;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .url-orig:hover {
+        color: #fff;
+        text-decoration: underline;
+    }
+
+    .short-link-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .short-link {
+        color: var(--accent-cyan);
+        font-weight: 600;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .short-link:hover {
+        color: #67e8f9;
+        text-decoration: underline;
+    }
+
+    .btn-copy {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid var(--border);
+        color: #94a3b8;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-copy:hover {
+        background: var(--primary);
+        color: #fff;
+        border-color: var(--primary);
+    }
+
+    .badge-clicks {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(6, 182, 212, 0.12);
+        color: #22d3ee;
+        border: 1px solid rgba(6, 182, 212, 0.25);
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 13px;
+    }
+
+    .btn-del {
+        background: rgba(244, 63, 94, 0.1);
+        border: 1px solid rgba(244, 63, 94, 0.2);
+        color: #fb7185;
+        padding: 6px 12px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .btn-del:hover {
+        background: var(--accent-rose);
+        color: #fff;
+        border-color: var(--accent-rose);
+    }
+
+    /* Empty state */
+    .empty-state {
+        text-align: center;
+        padding: 48px 20px;
+        color: var(--text-muted);
+    }
+
+    .empty-state-icon {
+        font-size: 48px;
+        margin-bottom: 12px;
+        opacity: 0.6;
+    }
+
+    .empty-state h4 {
+        font-size: 16px;
+        color: #cbd5e1;
+        margin-bottom: 6px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Metrics cards -->
+{% set total_clicks = 0 %}
+{% if enlaces %}
+    {% for e in enlaces %}
+        {% set total_clicks = total_clicks + e['clicks'] %}
+    {% endfor %}
+{% endif %}
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon icon-indigo">🔗</div>
+        <div class="stat-info">
+            <h4>Total Enlaces</h4>
+            <p>{{ enlaces|length if enlaces else 0 }}</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon icon-cyan">👁️</div>
+        <div class="stat-info">
+            <h4>Total Visitas</h4>
+            <p>{{ total_clicks }}</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon icon-emerald">🚀</div>
+        <div class="stat-info">
+            <h4>Estado</h4>
+            <p style="font-size: 18px; color: #34d399;">Activo</p>
+        </div>
+    </div>
+</div>
+
+<!-- Shortener form -->
+<div class="shortener-card">
+    <h2>⚡ Crear Enlace Corto</h2>
+    <p>Ingresa cualquier dirección web para generar un enlace rápido y medible</p>
+    
+    <form method="POST" class="shortener-form">
+        <div class="shortener-input-wrap">
+            <span class="url-icon">🌐</span>
+            <input type="text" id="original_url" name="original_url" class="shortener-input" placeholder="https://ejemplo.com/tu-articulo-o-enlace-muy-largo" required autofocus>
+        </div>
+        <button type="submit" class="btn-shorten">
+            <span>Acortar URL</span>
+            <span>➔</span>
+        </button>
+    </form>
+</div>
+
+<!-- Links table -->
+<div class="section-header">
+    <h3>📋 Enlaces Acortados Recientes</h3>
+</div>
+
+<div class="links-table-card">
+    {% if enlaces %}
+    <div style="overflow-x: auto;">
+        <table class="links-table">
+            <thead>
+                <tr>
+                    <th>URL Original</th>
+                    <th>Enlace Corto</th>
+                    <th style="text-align: center;">Visitas</th>
+                    <th style="text-align: right;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in enlaces %}
+                {% set short_url = url_for('redirigir', short_code=e['short_code'], _external=True) %}
+                <tr>
+                    <td>
+                        <a href="{{ e['original_url'] }}" target="_blank" class="url-orig" title="{{ e['original_url'] }}">
+                            🔗 {{ e['original_url'] }}
+                        </a>
+                    </td>
+                    <td>
+                        <div class="short-link-group">
+                            <a href="{{ short_url }}" target="_blank" class="short-link">
+                                /{{ e['short_code'] }}
+                            </a>
+                            <button type="button" class="btn-copy" onclick="copiarEnlace('{{ short_url }}', this)">
+                                📋 Copiar
+                            </button>
+                        </div>
+                    </td>
+                    <td style="text-align: center;">
+                        <span class="badge-clicks">
+                            🔥 {{ e['clicks'] }}
+                        </span>
+                    </td>
+                    <td style="text-align: right;">
+                        <a href="{{ url_for('eliminar', url_id=e['id']) }}" class="btn-del" onclick="return confirm('¿Seguro que deseas eliminar este enlace?')">
+                            🗑️ Borrar
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">📭</div>
+        <h4>No tienes enlaces registrados</h4>
+        <p>Pega tu primera URL en el formulario superior para comenzar a medir visitas.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function copiarEnlace(url, boton) {
+    navigator.clipboard.writeText(url).then(() => {
+        const originalText = boton.innerHTML;
+        boton.innerHTML = "✅ ¡Copiado!";
+        boton.style.background = "#10b981";
+        boton.style.color = "#fff";
+        setTimeout(() => {
+            boton.innerHTML = originalText;
+            boton.style.background = "";
+            boton.style.color = "";
+        }, 2000);
+    }).catch(err => {
+        prompt("Copia este enlace:", url);
+    });
+}
+</script>
+{% endblock %}
